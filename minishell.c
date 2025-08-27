@@ -1,5 +1,5 @@
 /*********************************************************************
-   Program  : miniShell                   Version    : 1.3
+   Program  : miniShell                   Version    : 1.4
  --------------------------------------------------------------------
    skeleton code for linix/unix/minix command line interpreter
  --------------------------------------------------------------------
@@ -29,6 +29,7 @@ void prompt(void)
   fflush(stdout);
 }
 
+/* handle finished background processes */
 void sigchld_handler(int sig)
 {
   int status;
@@ -40,17 +41,25 @@ void sigchld_handler(int sig)
   }
 }
 
+/* handle Ctrl+C in shell */
+void sigint_handler(int sig)
+{
+  printf("\n msh> ");
+  fflush(stdout);
+}
+
 /* argk - number of arguments */
 /* argv - argument vector from command line */
 /* envp - environment pointer */
 int main(int argk, char *argv[], char *envp[])
 {
    int             frkRtnVal;	    /* value returned by fork sys call */
-  char           *v[NV];	        /* array of pointers to command line tokens */
-  char           *sep = " \t\n";  /* command line token separators    */
-  int             i;		          /* parse index */
+   char           *v[NV];	        /* array of pointers to command line tokens */
+   char           *sep = " \t\n";  /* command line token separators    */
+   int             i;		          /* parse index */
 
-  signal(SIGCHLD, sigchld_handler);
+   signal(SIGCHLD, sigchld_handler);
+   signal(SIGINT, sigint_handler);
 
     /* prompt for and process one command line at a time  */
 
@@ -107,6 +116,9 @@ int main(int argk, char *argv[], char *envp[])
       }
       case 0:			/* code executed only by child process */
       {
+        /* restore default SIGINT behavior for child */
+        signal(SIGINT, SIG_DFL);
+
 	      if (execvp(v[0], v) == -1) {
           perror("execvp");
           exit(EXIT_FAILURE);
